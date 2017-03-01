@@ -15,6 +15,10 @@ import numpy as np
 def nothing(x):
     pass
 
+h = 40 # centimeter
+focal_length_x = 685.93*5.25 # focal lenght of camera
+focal_length_y = 687.33*5.25/1.3 # focal lenght of camera 
+
 # define windows
 cv2.namedWindow('input')
 cv2.namedWindow('mask')
@@ -62,13 +66,13 @@ while(1):
     openKernel = np.ones(openKernelSize,np.uint8)
     closeKernel = np.ones(closeKernelSize,np.uint8)
     opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, openKernel)
-    closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, closeKernel)
+    mask_ = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, closeKernel)
     
     # final image output
-    imgFiltered = cv2.bitwise_and(frame,frame, mask= closing)
+    imgFiltered = cv2.bitwise_and(frame,frame, mask= mask_)
     
     # calculate moments
-    moments = cv2.moments(mask)
+    moments = cv2.moments(mask_)
     m00 = moments['m00']
     centroid_x, centroid_y = None, None
     # calculate center of gravity
@@ -76,14 +80,19 @@ while(1):
         centroid_x = int(moments['m10']/m00)
         centroid_y = int(moments['m01']/m00)
     ctr = (-1,-1)
-    # draw circle on center of gravity
+    # draw circle on center of gravity and calculate real x and y by pinhole model
     if centroid_x != None and centroid_y != None:
         ctr = (centroid_x, centroid_y)
         cv2.circle(frame, ctr, 10, (255,0,0))
+        h, w = mask_.shape
+        ctr = (w/2-centroid_x, h/2-centroid_y)
+        loc_x = (ctr[0]*h)/focal_length_x
+        loc_y = (ctr[1]*h)/focal_length_y
+        print(' loc_x  ',loc_x,'cm','\'II  loc_y ',loc_y,'cm', 'pixel_x',ctr[0],'pixel_y',ctr[1])
     
     # display images
     cv2.imshow('input',frame)
-    cv2.imshow('mask', mask)
+    cv2.imshow('mask', mask_)
     cv2.imshow('input+mas',imgFiltered)
     
     # waiting 'q' for exit 
